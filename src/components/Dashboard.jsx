@@ -30,6 +30,7 @@ import {
   decodeToken,
   getToken,
 } from "../utils/api.js";
+import ConfirmationModal from "./ConfirmationModal.jsx";
 
 const calculateAge = (dob) => {
   if (!dob) return null;
@@ -66,6 +67,13 @@ const Dashboard = () => {
     newPassword: "",
     confirmPassword: "",
   });
+  
+  const [modals, setModals] = useState({
+    delete: false,
+    logout: false,
+    save: false,
+  });
+  const [isSaving, setIsSaving] = useState(false);
   
   const fileInputRef = useRef(null);
 
@@ -125,15 +133,22 @@ const Dashboard = () => {
     fetchDashboard();
   }, []);
 
-  const handleProfileSubmit = async (e) => {
+  const handleProfileSubmit = (e) => {
     e.preventDefault();
+    setModals((prev) => ({ ...prev, save: true }));
+  };
 
+  const confirmProfileSubmit = async () => {
+    setIsSaving(true);
     try {
       const data = await updateProfile(profile);
       setAuth(localStorage.getItem("token"), data.user);
       toast.success("Profile updated successfully");
+      setModals((prev) => ({ ...prev, save: false }));
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -144,6 +159,7 @@ const Dashboard = () => {
       return toast.error("New passwords do not match");
     }
 
+    setIsSaving(true);
     try {
       await changePassword({
         currentPassword: passwords.currentPassword,
@@ -153,10 +169,16 @@ const Dashboard = () => {
       toast.success("Password changed successfully");
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
+    setModals((prev) => ({ ...prev, logout: true }));
+  };
+
+  const confirmLogout = async () => {
     try {
       await logoutUser();
     } catch {
@@ -168,16 +190,21 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (window.confirm("Are you absolutely sure you want to delete your account? This action cannot be undone.")) {
-      try {
-        await deleteUserAccount();
-        clearAuth();
-        toast.success("Account deleted permanently. Goodbye! 👋");
-        setTimeout(() => navigate("/signup"), 1000);
-      } catch (err) {
-        toast.error(err.message || "Failed to delete account");
-      }
+  const handleDeleteAccount = () => {
+    setModals((prev) => ({ ...prev, delete: true }));
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsSaving(true);
+    try {
+      await deleteUserAccount();
+      clearAuth();
+      toast.success("Account deleted permanently. Goodbye! 👋");
+      setTimeout(() => navigate("/signup"), 1000);
+    } catch (err) {
+      toast.error(err.message || "Failed to delete account");
+      setIsSaving(false);
+      setModals((prev) => ({ ...prev, delete: false }));
     }
   };
 
@@ -401,7 +428,7 @@ const Dashboard = () => {
               </div>
 
               <div className="mt-8 flex justify-end">
-                <button type="submit" className="btn-primary flex items-center gap-2">
+                <button type="submit" disabled={isSaving} className="btn-primary flex items-center gap-2">
                   <Save size={18} />
                   Save Changes
                 </button>
@@ -462,9 +489,9 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <button type="submit" className="btn-primary mt-6 flex items-center gap-2">
+                <button type="submit" disabled={isSaving} className="btn-primary mt-6 flex items-center gap-2">
                   <Shield size={18} />
-                  Update Password
+                  {isSaving ? "Updating..." : "Update Password"}
                 </button>
               </form>
 
@@ -537,6 +564,38 @@ const Dashboard = () => {
           
         </div>
       </div>
+
+      {/* Confirmation Modals */}
+      <ConfirmationModal
+        isOpen={modals.save}
+        onClose={() => !isSaving && setModals(prev => ({ ...prev, save: false }))}
+        onConfirm={confirmProfileSubmit}
+        title="Save Changes"
+        message="Are you sure you want to save these changes to your profile?"
+        confirmText="Save Changes"
+        cancelText="Discard Changes"
+        isLoading={isSaving}
+      />
+
+      <ConfirmationModal
+        isOpen={modals.logout}
+        onClose={() => setModals(prev => ({ ...prev, logout: false }))}
+        onConfirm={confirmLogout}
+        title="Sign Out"
+        message="Are you sure you want to sign out of your account?"
+        confirmText="Sign Out"
+      />
+
+      <ConfirmationModal
+        isOpen={modals.delete}
+        onClose={() => !isSaving && setModals(prev => ({ ...prev, delete: false }))}
+        onConfirm={confirmDeleteAccount}
+        title="Delete Account"
+        message="Are you absolutely sure you want to delete your account? This action cannot be undone and all your data will be permanently removed."
+        confirmText="Delete Account"
+        isDanger={true}
+        isLoading={isSaving}
+      />
     </div>
   );
 };
