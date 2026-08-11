@@ -49,6 +49,46 @@ export const setTokenExpiredHandler = (handler) => {
   _onTokenExpired = handler;
 };
 
+/**
+ * Sleep helper for retry delays.
+ */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Core fetch with automatic retry on cold-start failures (network errors).
+ * - Retries up to `maxRetries` times on TypeError (fetch/network failure)
+ * - Uses exponential backoff: 1s, 2s, 4s...
+ * - Does NOT retry on HTTP errors (4xx/5xx) — those are real errors.
+ */
+const fetchWithRetry = async (url, options = {}, maxRetries = 3) => {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      return response; // success — return immediately
+    } catch (err) {
+      lastError = err;
+
+      // Only retry on network errors (cold start, connection refused, etc.)
+      // TypeError = "Failed to fetch" / network issue
+      if (!(err instanceof TypeError)) {
+        throw err; // some other error — don't retry
+      }
+
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        console.warn(
+          `[API] Request failed (attempt ${attempt + 1}/${maxRetries + 1}). Cold start? Retrying in ${delay / 1000}s...`
+        );
+        await sleep(delay);
+      }
+    }
+  }
+
+  throw lastError; // all retries exhausted
+};
+
 export const apiFetch = async (path, options = {}) => {
   const token = getToken();
   const headers = {
@@ -60,7 +100,7 @@ export const apiFetch = async (path, options = {}) => {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetchWithRetry(`${API_BASE}${path}`, {
     ...options,
     headers,
   });
@@ -83,6 +123,16 @@ export const apiFetch = async (path, options = {}) => {
   }
 
   return data;
+};
+
+/**
+ * Ping the backend to wake it up from Vercel cold start.
+ * Call this on app load so the server is warm before the user submits a form.
+ */
+export const warmUpServer = () => {
+  fetch(`${API_BASE}/`).catch(() => {
+    // Silently ignore — this is just a warm-up ping
+  });
 };
 
 export const signupUser = (payload) =>

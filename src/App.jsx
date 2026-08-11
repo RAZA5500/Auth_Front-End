@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Navbar from "./components/Navbar.jsx";
@@ -6,8 +7,15 @@ import Login from "./components/Login.jsx";
 import Signup from "./components/Signup.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import { warmUpServer } from "./utils/api.js";
 
 function App() {
+  // Ping the backend on app load to wake up the Vercel serverless function
+  // from cold start — so it's ready by the time the user submits a form.
+  useEffect(() => {
+    warmUpServer();
+  }, []);
+
   return (
     <>
       <Toaster 
