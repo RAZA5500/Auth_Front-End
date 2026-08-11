@@ -56,30 +56,43 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Core fetch with automatic retry on cold-start failures (network errors).
+ * - Each attempt has a 30-second timeout via AbortController
  * - Retries up to `maxRetries` times on TypeError (fetch/network failure)
- * - Uses exponential backoff: 1s, 2s, 4s...
+ * - Uses shorter backoff: 500ms, 1s, 2s, 3s — to recover faster from cold starts
  * - Does NOT retry on HTTP errors (4xx/5xx) — those are real errors.
  */
-const fetchWithRetry = async (url, options = {}, maxRetries = 3) => {
+const fetchWithRetry = async (url, options = {}, maxRetries = 4) => {
   let lastError;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    // Create a per-attempt 30-second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeoutId);
       return response; // success — return immediately
     } catch (err) {
+      clearTimeout(timeoutId);
       lastError = err;
 
-      // Only retry on network errors (cold start, connection refused, etc.)
-      // TypeError = "Failed to fetch" / network issue
-      if (!(err instanceof TypeError)) {
+      // AbortError = our own 30s timeout fired
+      const isTimeout = err.name === "AbortError";
+      // TypeError = "Failed to fetch" / network issue (cold start, CORS preflight, etc.)
+      const isNetworkError = err instanceof TypeError;
+
+      if (!isTimeout && !isNetworkError) {
         throw err; // some other error — don't retry
       }
 
       if (attempt < maxRetries) {
-        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        // Shorter backoff so we recover faster: 500ms, 1s, 2s, 3s
+        const delay = Math.min((attempt + 1) * 500, 3000);
         console.warn(
-          `[API] Request failed (attempt ${attempt + 1}/${maxRetries + 1}). Cold start? Retrying in ${delay / 1000}s...`
+          `[API] Request failed (attempt ${attempt + 1}/${maxRetries + 1}).${
+            isTimeout ? " Timeout." : " Cold start?"
+          } Retrying in ${delay / 1000}s...`
         );
         await sleep(delay);
       }
@@ -127,12 +140,24 @@ export const apiFetch = async (path, options = {}) => {
 
 /**
  * Ping the backend to wake it up from Vercel cold start.
- * Call this on app load so the server is warm before the user submits a form.
+ * Retries a few times so the server is fully warm before the user submits a form.
+ * Call this on app load (e.g. in App.jsx useEffect).
  */
-export const warmUpServer = () => {
-  fetch(`${API_BASE}/`).catch(() => {
-    // Silently ignore — this is just a warm-up ping
-  });
+export const warmUpServer = async () => {
+  const maxPings = 4;
+  for (let i = 0; i < maxPings; i++) {
+    try {
+      const res = await fetch(`${API_BASE}/`, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        console.log("[API] Server is warm and ready.");
+        return;
+      }
+    } catch {
+      // Server not ready yet — wait and retry
+    }
+    if (i < maxPings - 1) await sleep(2000);
+  }
+  console.warn("[API] Server may still be cold — user requests will retry automatically.");
 };
 
 export const signupUser = (payload) =>
