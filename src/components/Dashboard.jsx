@@ -15,7 +15,10 @@ import {
   Info,
   Clock,
   Heart,
-  Globe
+  Heart,
+  Globe,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -74,6 +77,9 @@ const Dashboard = () => {
     save: false,
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const fileInputRef = useRef(null);
 
@@ -445,27 +451,45 @@ const Dashboard = () => {
                 <div className="space-y-5">
                   <div>
                     <label className="field-label"><Lock size={16} /> Current Password</label>
-                    <input
-                      type="password"
-                      className="field-input"
-                      value={passwords.currentPassword}
-                      onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
-                      placeholder="Enter current password"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showCurrentPassword ? "text" : "password"}
+                        className="field-input pr-10"
+                        value={passwords.currentPassword}
+                        onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
+                        placeholder="Enter current password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      >
+                        {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
 
                   <div>
                     <label className="field-label"><Lock size={16} /> New Password</label>
-                    <input
-                      type="password"
-                      className="field-input"
-                      value={passwords.newPassword}
-                      onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
-                      placeholder="Enter new password"
-                      minLength={6}
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        className="field-input pr-10"
+                        value={passwords.newPassword}
+                        onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
+                        placeholder="Enter new password"
+                        minLength={6}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                     <div className="password-strength">
                       <div 
                         className="password-strength-bar" 
@@ -477,15 +501,24 @@ const Dashboard = () => {
                   
                   <div>
                     <label className="field-label"><Lock size={16} /> Confirm New Password</label>
-                    <input
-                      type="password"
-                      className="field-input"
-                      value={passwords.confirmPassword}
-                      onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
-                      placeholder="Confirm new password"
-                      minLength={6}
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        className="field-input pr-10"
+                        value={passwords.confirmPassword}
+                        onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
+                        placeholder="Confirm new password"
+                        minLength={6}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 

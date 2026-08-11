@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, LogIn } from "lucide-react";
+import { Mail, Lock, LogIn, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { loginUser, setAuth } from "../utils/api.js";
 
@@ -9,6 +9,7 @@ const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,14 +54,23 @@ const Login = () => {
               <Lock size={16} />
               Password
             </label>
-            <input
-              type="password"
-              className="field-input"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="Enter your password"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                className="field-input pr-10"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder="Enter your password"
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <button type="submit" className="btn-primary w-full" disabled={loading}>
