@@ -15,7 +15,6 @@ import {
   Info,
   Clock,
   Heart,
-  Heart,
   Globe,
   Eye,
   EyeOff
