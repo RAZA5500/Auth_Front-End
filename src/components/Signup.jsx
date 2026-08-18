@@ -30,18 +30,7 @@ const Signup = () => {
 
   return (
     <div className="auth-page flex min-h-screen items-center justify-center px-4 py-24">
-      <div className="auth-bg page-bg">
-        <div className="grid-overlay" />
-        <div className="glow-orb glow-orb-2" />
-        <div className="glow-orb glow-orb-3" />
-        <div className="particles">
-          {[...Array(6)].map((_, i) => (
-            <span key={i} className="particle" />
-          ))}
-        </div>
-      </div>
-
-      <div className="auth-card">
+      <div className="auth-card animate-fade-up">
         <h1 className="auth-title">Create Account</h1>
         <p className="auth-subtitle">Join AuthFlow today</p>
 

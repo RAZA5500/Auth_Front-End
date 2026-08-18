@@ -29,18 +29,7 @@ const Login = () => {
 
   return (
     <div className="auth-page flex min-h-screen items-center justify-center px-4 py-24">
-      <div className="auth-bg page-bg">
-        <div className="grid-overlay" />
-        <div className="glow-orb glow-orb-1" />
-        <div className="glow-orb glow-orb-2" />
-        <div className="particles">
-          {[...Array(6)].map((_, i) => (
-            <span key={i} className="particle" />
-          ))}
-        </div>
-      </div>
-
-      <div className="auth-card">
+      <div className="auth-card animate-fade-up">
         <h1 className="auth-title">Welcome Back</h1>
         <p className="auth-subtitle">Sign in to your account</p>
 
