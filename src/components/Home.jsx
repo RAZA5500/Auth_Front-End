@@ -7,6 +7,9 @@ import {
   ArrowRight,
   Sparkles,
   ChevronDown,
+  Users,
+  KeyRound,
+  Globe,
 } from "lucide-react";
 
 const features = [
@@ -14,20 +17,29 @@ const features = [
     icon: Shield,
     title: "Secure Authentication",
     description:
-      "Industry-standard JWT tokens and bcrypt password hashing keep your data safe.",
+      "JWT access tokens, refresh tokens, and bcrypt password hashing keep your data safe.",
+    color: "from-violet-500/20 to-purple-500/10",
   },
   {
     icon: Zap,
     title: "Lightning Fast",
     description:
       "Built with React and Express for a snappy, responsive experience on any device.",
+    color: "from-cyan-500/20 to-blue-500/10",
   },
   {
     icon: Lock,
     title: "Protected Dashboard",
     description:
       "Manage your profile, update settings, and control your account from one place.",
+    color: "from-pink-500/20 to-rose-500/10",
   },
+];
+
+const stats = [
+  { value: "10m", label: "Token Expiry" },
+  { value: "10d", label: "Refresh Window" },
+  { value: "256-bit", label: "Encryption" },
 ];
 
 const Home = () => {
@@ -42,7 +54,7 @@ const Home = () => {
           }
         });
       },
-      { threshold: 0.15 },
+      { threshold: 0.12 },
     );
 
     document.querySelectorAll(".scroll-reveal").forEach((el) => {
@@ -54,29 +66,35 @@ const Home = () => {
 
   return (
     <div className="landing-page">
-      {/* Animated background */}
-      <div className="landing-bg">
+      <div className="landing-bg page-bg">
         <div className="grid-overlay" />
         <div className="glow-orb glow-orb-1" />
         <div className="glow-orb glow-orb-2" />
         <div className="glow-orb glow-orb-3" />
+        <div className="particles">
+          {[...Array(8)].map((_, i) => (
+            <span key={i} className="particle" />
+          ))}
+        </div>
       </div>
 
-      {/* Hero Section */}
       <section ref={heroRef} className="hero-section">
         <div className="hero-badge animate-fade-down">
-          <Sparkles size={14} />
-          <span>Secure Full-Stack Auth</span>
+          <Sparkles size={14} className="animate-float-slow" />
+          <span>Secure Full-Stack Auth Platform</span>
         </div>
 
         <h1 className="hero-title animate-fade-up">
           Welcome to{" "}
-          <span className="text-gradient">AuthFlow</span>
+          <span className="text-gradient animate-text-glow">AuthFlow</span>
         </h1>
 
-        <p className="hero-subtitle animate-fade-up" style={{ animationDelay: "0.15s" }}>
-          A modern authentication platform with a sleek dashboard.
-          Sign up, log in, and take control of your account — all in one place.
+        <p
+          className="hero-subtitle animate-fade-up"
+          style={{ animationDelay: "0.15s" }}
+        >
+          A stunning authentication platform with refresh tokens, protected
+          dashboard, and a modern animated UI — built to impress.
         </p>
 
         <div
@@ -84,10 +102,10 @@ const Home = () => {
           style={{ animationDelay: "0.3s" }}
         >
           <Link to="/signup" className="btn-primary group">
-            Get Started
+            Get Started Free
             <ArrowRight
               size={18}
-              className="transition-transform group-hover:translate-x-1"
+              className="transition-transform duration-300 group-hover:translate-x-1.5"
             />
           </Link>
           <Link to="/login" className="btn-outline">
@@ -95,18 +113,29 @@ const Home = () => {
           </Link>
         </div>
 
+        <div
+          className="hero-stats animate-fade-up"
+          style={{ animationDelay: "0.45s" }}
+        >
+          {stats.map((stat) => (
+            <div key={stat.label} className="hero-stat">
+              <div className="hero-stat-value">{stat.value}</div>
+              <div className="hero-stat-label">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+
         <div className="scroll-indicator animate-bounce-slow">
-          <ChevronDown size={24} className="text-emerald-400/60" />
+          <ChevronDown size={26} />
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="features-section">
         <h2 className="section-title scroll-reveal">
-          Why <span className="text-gradient">AuthFlow</span>?
+          Why choose <span className="text-gradient">AuthFlow</span>?
         </h2>
         <p className="section-subtitle scroll-reveal">
-          Everything you need for a complete authentication experience
+          Everything you need for a complete, production-ready auth experience
         </p>
 
         <div className="features-grid">
@@ -114,7 +143,7 @@ const Home = () => {
             <div
               key={feature.title}
               className="feature-card scroll-reveal"
-              style={{ transitionDelay: `${index * 0.1}s` }}
+              style={{ transitionDelay: `${index * 0.12}s` }}
             >
               <div className="feature-icon">
                 <feature.icon size={28} />
@@ -126,7 +155,28 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
+      <section className="features-section" style={{ paddingTop: 0 }}>
+        <div className="features-grid">
+          {[
+            { icon: Users, title: "User Profiles", desc: "Rich profile management with avatar, bio & more" },
+            { icon: KeyRound, title: "Token Refresh", desc: "Automatic silent refresh keeps users logged in" },
+            { icon: Globe, title: "Deploy Ready", desc: "Works on Vercel with cold-start recovery built in" },
+          ].map((item, index) => (
+            <div
+              key={item.title}
+              className="feature-card scroll-reveal"
+              style={{ transitionDelay: `${index * 0.1}s` }}
+            >
+              <div className="feature-icon">
+                <item.icon size={26} />
+              </div>
+              <h3 className="feature-title">{item.title}</h3>
+              <p className="feature-description">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="cta-section scroll-reveal">
         <div className="cta-card">
           <h2 className="cta-title">Ready to get started?</h2>
@@ -137,13 +187,12 @@ const Home = () => {
             Create Free Account
             <ArrowRight
               size={18}
-              className="transition-transform group-hover:translate-x-1"
+              className="transition-transform duration-300 group-hover:translate-x-1.5"
             />
           </Link>
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="landing-footer">
         <p>&copy; 2026 AuthFlow. Built with React &amp; Express.</p>
       </footer>

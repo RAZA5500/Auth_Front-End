@@ -26,7 +26,7 @@ const Navbar = () => {
     <nav className="navbar fixed top-0 right-0 left-0 z-50">
       <div className="navbar-inner mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link to="/" className="navbar-brand">
-          Auth<span className="text-emerald-400">Flow</span>
+          Auth<span className="brand-accent">Flow</span>
         </Link>
 
         <div className="flex items-center gap-2">
