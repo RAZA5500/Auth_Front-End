@@ -17,7 +17,7 @@ const Login = () => {
 
     try {
       const data = await loginUser(form);
-      setAuth(data.token, data.user);
+      setAuth(data.accessToken, data.user, data.refreshToken);
       toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (err) {

@@ -18,7 +18,7 @@ const Signup = () => {
     try {
       await signupUser(form);
       const loginData = await loginUser({ email: form.email, password: form.password });
-      setAuth(loginData.token, loginData.user);
+      setAuth(loginData.accessToken, loginData.user, loginData.refreshToken);
       toast.success("Account created successfully!");
       navigate("/dashboard");
     } catch (err) {

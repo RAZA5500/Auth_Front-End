@@ -1,14 +1,23 @@
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+const AUTH_PATHS = new Set(["/api/users/login", "/api/users/signup", "/api/users/refresh"]);
+
 export const getToken = () => localStorage.getItem("token");
 
-export const setAuth = (token, user) => {
-  localStorage.setItem("token", token);
+export const getRefreshToken = () => localStorage.getItem("refreshToken");
+
+export const setAuth = (accessToken, user, refreshToken = null) => {
+  localStorage.setItem("token", accessToken);
   localStorage.setItem("user", JSON.stringify(user));
+
+  if (refreshToken) {
+    localStorage.setItem("refreshToken", refreshToken);
+  }
 };
 
 export const clearAuth = () => {
   localStorage.removeItem("token");
+  localStorage.removeItem("refreshToken");
   localStorage.removeItem("user");
 };
 
@@ -31,16 +40,31 @@ export const decodeToken = (token) => {
   }
 };
 
+const isJwtNotExpired = (token) => {
+  const payload = decodeToken(token);
+  if (!payload || !payload.exp) return false;
+  return payload.exp * 1000 > Date.now();
+};
+
 /**
- * Returns true if the stored JWT is present AND not expired.
+ * Returns true if the stored access JWT is present AND not expired.
  */
 export const isTokenValid = () => {
   const token = getToken();
   if (!token) return false;
-  const payload = decodeToken(token);
-  if (!payload || !payload.exp) return false;
-  // exp is in seconds, Date.now() is ms
-  return payload.exp * 1000 > Date.now();
+  return isJwtNotExpired(token);
+};
+
+/**
+ * Returns true if access token is valid, or refresh token can still renew the session.
+ */
+export const hasValidSession = () => {
+  if (isTokenValid()) return true;
+
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  return isJwtNotExpired(refreshToken);
 };
 
 // Callback that Dashboard/App can set so apiFetch can trigger auto-logout
@@ -65,29 +89,25 @@ const fetchWithRetry = async (url, options = {}, maxRetries = 4) => {
   let lastError;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    // Create a per-attempt 30-second timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const response = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timeoutId);
-      return response; // success — return immediately
+      return response;
     } catch (err) {
       clearTimeout(timeoutId);
       lastError = err;
 
-      // AbortError = our own 30s timeout fired
       const isTimeout = err.name === "AbortError";
-      // TypeError = "Failed to fetch" / network issue (cold start, CORS preflight, etc.)
       const isNetworkError = err instanceof TypeError;
 
       if (!isTimeout && !isNetworkError) {
-        throw err; // some other error — don't retry
+        throw err;
       }
 
       if (attempt < maxRetries) {
-        // Shorter backoff so we recover faster: 500ms, 1s, 2s, 3s
         const delay = Math.min((attempt + 1) * 500, 3000);
         console.warn(
           `[API] Request failed (attempt ${attempt + 1}/${maxRetries + 1}).${
@@ -99,10 +119,55 @@ const fetchWithRetry = async (url, options = {}, maxRetries = 4) => {
     }
   }
 
-  throw lastError; // all retries exhausted
+  throw lastError;
 };
 
-export const apiFetch = async (path, options = {}) => {
+let refreshPromise = null;
+
+export const refreshAccessToken = async () => {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      throw new Error("No refresh token available");
+    }
+
+    const response = await fetchWithRetry(`${API_BASE}/api/users/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to refresh session");
+    }
+
+    setAuth(data.accessToken, getStoredUser(), data.refreshToken);
+    return data.accessToken;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+};
+
+const handleSessionExpired = () => {
+  clearAuth();
+  if (_onTokenExpired) {
+    _onTokenExpired();
+  } else {
+    window.location.href = "/login";
+  }
+};
+
+export const apiFetch = async (path, options = {}, retried = false) => {
   const token = getToken();
   const headers = {
     "Content-Type": "application/json",
@@ -120,14 +185,20 @@ export const apiFetch = async (path, options = {}) => {
 
   const data = await response.json();
 
-  // 401 = token expired or invalid — trigger auto-logout
-  if (response.status === 401) {
-    clearAuth();
-    if (_onTokenExpired) {
-      _onTokenExpired();
-    } else {
-      window.location.href = "/login";
+  if (response.status === 401 && !retried && !AUTH_PATHS.has(path)) {
+    const refreshToken = getRefreshToken();
+
+    if (refreshToken) {
+      try {
+        await refreshAccessToken();
+        return apiFetch(path, options, true);
+      } catch {
+        handleSessionExpired();
+        throw new Error("Session expired. Please log in again.");
+      }
     }
+
+    handleSessionExpired();
     throw new Error("Session expired. Please log in again.");
   }
 

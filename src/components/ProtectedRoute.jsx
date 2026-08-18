@@ -1,8 +1,8 @@
 import { Navigate } from "react-router-dom";
-import { isTokenValid } from "../utils/api.js";
+import { hasValidSession } from "../utils/api.js";
 
 const ProtectedRoute = ({ children }) => {
-  if (!isTokenValid()) {
+  if (!hasValidSession()) {
     return <Navigate to="/login" replace />;
   }
 

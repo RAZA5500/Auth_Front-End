@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { getToken, clearAuth, logoutUser } from "../utils/api.js";
+import { hasValidSession, clearAuth, logoutUser } from "../utils/api.js";
 
 const navLinkClass = ({ isActive }) =>
   isActive ? "nav-link nav-link-active" : "nav-link";
@@ -9,7 +9,7 @@ const navBtnClass = ({ isActive }) =>
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const isLoggedIn = !!getToken();
+  const isLoggedIn = hasValidSession();
 
   const handleLogout = async () => {
     try {

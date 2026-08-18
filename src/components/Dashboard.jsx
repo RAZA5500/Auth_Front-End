@@ -31,6 +31,8 @@ import {
   setTokenExpiredHandler,
   decodeToken,
   getToken,
+  getRefreshToken,
+  refreshAccessToken,
 } from "../utils/api.js";
 import ConfirmationModal from "./ConfirmationModal.jsx";
 
@@ -82,34 +84,49 @@ const Dashboard = () => {
   
   const fileInputRef = useRef(null);
 
-  // ── Auto-logout when token expires ──────────────────────────────────
+  // ── Proactive token refresh before access token expires ───────────
   useEffect(() => {
-    // Register handler so any 401 from apiFetch triggers this
     setTokenExpiredHandler(() => {
       toast.error("Session expired. Please log in again.");
       setTimeout(() => navigate("/login"), 1500);
     });
 
-    // Also set a client-side timer that fires exactly when the JWT expires
-    const token = getToken();
-    if (token) {
+    let expiryTimer;
+
+    const scheduleRefresh = () => {
+      const token = getToken();
+      if (!token) return;
+
       const payload = decodeToken(token);
-      if (payload?.exp) {
-        const msUntilExpiry = payload.exp * 1000 - Date.now();
-        if (msUntilExpiry > 0) {
-          const timer = setTimeout(() => {
-            clearAuth();
-            toast.error("Session expired. Please log in again.");
-            setTimeout(() => navigate("/login"), 1500);
-          }, msUntilExpiry);
-          return () => clearTimeout(timer);
-        } else {
-          // Token already expired before component mounted
+      if (!payload?.exp) return;
+
+      const msUntilExpiry = payload.exp * 1000 - Date.now();
+      const refreshIn = Math.max(msUntilExpiry - 60_000, 0);
+
+      expiryTimer = setTimeout(async () => {
+        if (!getRefreshToken()) {
           clearAuth();
+          toast.error("Session expired. Please log in again.");
+          navigate("/login");
+          return;
+        }
+
+        try {
+          await refreshAccessToken();
+          scheduleRefresh();
+        } catch {
+          clearAuth();
+          toast.error("Session expired. Please log in again.");
           navigate("/login");
         }
-      }
-    }
+      }, refreshIn);
+    };
+
+    scheduleRefresh();
+
+    return () => {
+      if (expiryTimer) clearTimeout(expiryTimer);
+    };
   }, [navigate]);
 
   useEffect(() => {
@@ -147,7 +164,7 @@ const Dashboard = () => {
     setIsSaving(true);
     try {
       const data = await updateProfile(profile);
-      setAuth(localStorage.getItem("token"), data.user);
+      setAuth(getToken(), data.user, getRefreshToken());
       toast.success("Profile updated successfully");
       setModals((prev) => ({ ...prev, save: false }));
     } catch (err) {
