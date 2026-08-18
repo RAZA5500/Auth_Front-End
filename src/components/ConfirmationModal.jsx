@@ -1,5 +1,5 @@
 import React from "react";
-import { X } from "lucide-react";
+import { X, AlertTriangle, ShieldCheck } from "lucide-react";
 
 const ConfirmationModal = ({
   isOpen,
@@ -10,7 +10,7 @@ const ConfirmationModal = ({
   confirmText = "Confirm",
   cancelText = "Cancel",
   isDanger = false,
-  isLoading = false
+  isLoading = false,
 }) => {
   if (!isOpen) return null;
 
@@ -18,18 +18,32 @@ const ConfirmationModal = ({
     <div className="modal-overlay">
       <div className="modal-card">
         <div className="modal-header">
-          <h3 className="modal-title">{title}</h3>
+          <div className="flex items-center gap-2.5">
+            {isDanger ? (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/20 text-red-400">
+                <AlertTriangle size={18} />
+              </div>
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
+                <ShieldCheck size={18} />
+              </div>
+            )}
+            <h3 className="modal-title">{title}</h3>
+          </div>
           <button
             onClick={onClose}
             disabled={isLoading}
             className="modal-close disabled:opacity-50"
+            aria-label="Close modal"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
+        
         <div className="modal-body">
-          <p>{message}</p>
+          <p className="text-zinc-300 text-sm leading-relaxed">{message}</p>
         </div>
+        
         <div className="modal-footer">
           <button
             onClick={onClose}
@@ -48,7 +62,7 @@ const ConfirmationModal = ({
             {isLoading ? (
               <>
                 <span className="modal-spinner" />
-                Processing...
+                <span>Processing...</span>
               </>
             ) : (
               confirmText
