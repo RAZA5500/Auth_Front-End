@@ -48,6 +48,38 @@ const calculateAge = (dob) => {
   return age;
 };
 
+const formatDob = (dob) => {
+  if (!dob) return "";
+  return new Date(dob).toISOString().split("T")[0];
+};
+
+const buildProfileState = (profileData) => ({
+  name: profileData.name || "",
+  email: profileData.email || "",
+  phone: profileData.phone || "",
+  dob: formatDob(profileData.dob),
+  bio: profileData.bio || "",
+  gender: profileData.gender || "",
+  location: profileData.location || "",
+  website: profileData.website || "",
+  avatar: profileData.avatar || "",
+});
+
+const PROFILE_FIELDS = [
+  "name",
+  "email",
+  "phone",
+  "dob",
+  "bio",
+  "gender",
+  "location",
+  "website",
+  "avatar",
+];
+
+const hasProfileChanges = (current, original) =>
+  PROFILE_FIELDS.some((field) => current[field] !== original[field]);
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -64,6 +96,7 @@ const Dashboard = () => {
     website: "",
     avatar: ""
   });
+  const [savedProfile, setSavedProfile] = useState(null);
   
   const [stats, setStats] = useState(null);
   const [passwords, setPasswords] = useState({
@@ -133,17 +166,9 @@ const Dashboard = () => {
     const fetchDashboard = async () => {
       try {
         const data = await getDashboard();
-        setProfile({
-          name: data.profile.name || "",
-          email: data.profile.email || "",
-          phone: data.profile.phone || "",
-          dob: data.profile.dob ? new Date(data.profile.dob).toISOString().split('T')[0] : "",
-          bio: data.profile.bio || "",
-          gender: data.profile.gender || "",
-          location: data.profile.location || "",
-          website: data.profile.website || "",
-          avatar: data.profile.avatar || "",
-        });
+        const profileState = buildProfileState(data.profile);
+        setProfile(profileState);
+        setSavedProfile(profileState);
         setStats(data.stats);
       } catch (err) {
         toast.error(err.message);
@@ -157,14 +182,29 @@ const Dashboard = () => {
 
   const handleProfileSubmit = (e) => {
     e.preventDefault();
+
+    if (!savedProfile || !hasProfileChanges(profile, savedProfile)) {
+      toast.error("No changes to save");
+      return;
+    }
+
     setModals((prev) => ({ ...prev, save: true }));
   };
 
   const confirmProfileSubmit = async () => {
+    if (!savedProfile || !hasProfileChanges(profile, savedProfile)) {
+      setModals((prev) => ({ ...prev, save: false }));
+      toast.error("No changes to save");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const data = await updateProfile(profile);
       setAuth(getToken(), data.user, getRefreshToken());
+      const updatedProfile = buildProfileState(data.user);
+      setProfile(updatedProfile);
+      setSavedProfile(updatedProfile);
       toast.success("Profile updated successfully");
       setModals((prev) => ({ ...prev, save: false }));
     } catch (err) {
@@ -272,6 +312,7 @@ const Dashboard = () => {
 
   const age = calculateAge(profile.dob);
   const strengthValue = getPasswordStrength();
+  const profileChanged = savedProfile ? hasProfileChanges(profile, savedProfile) : false;
 
   return (
     <div className="dashboard-page min-h-screen px-4 py-24">
@@ -450,7 +491,7 @@ const Dashboard = () => {
               </div>
 
               <div className="mt-8 flex justify-end">
-                <button type="submit" disabled={isSaving} className="btn-primary flex items-center gap-2">
+                <button type="submit" disabled={isSaving || !profileChanged} className="btn-primary flex items-center gap-2">
                   <Save size={18} />
                   Save Changes
                 </button>
